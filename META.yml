@@ -1,5 +1,5 @@
 ---
-abstract: 'Non-blocking Web server and framework based on AnyEvent'
+abstract: 'Non-blocking web framework based on Plack and AnyEvent'
 author:
   - 'Tatsuhiko Miyagawa <miyagawa@bulknews.net>'
 build_requires:
@@ -20,19 +20,19 @@ no_index:
     - t
     - xt
 requires:
+  Any::Moose: 0
   AnyEvent: 5.2
   AnyEvent::HTTP: 0
   Filter::Util::Call: 0
   JSON: 0
-  Moose: 0
-  MooseX::NonMoose: 0
   Plack: 0.9006
   Plack::Request: 0
   Plack::Server::AnyEvent: 0.02
   Text::MicroTemplate: 0
-  Throwable: 0
+  Try::Tiny: 0
+  parent: 0
   perl: 5.8.1
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/miyagawa/Tatsumaki.git
-version: 0.1000
+version: 0.1001

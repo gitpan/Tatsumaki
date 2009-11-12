@@ -2,7 +2,7 @@ package Tatsumaki;
 
 use strict;
 use 5.008_001;
-our $VERSION = '0.1000';
+our $VERSION = '0.1001';
 
 1;
 __END__
@@ -13,17 +13,18 @@ __END__
 
 =head1 NAME
 
-Tatsumaki - Non-blocking Web server and framework based on AnyEvent
+Tatsumaki - Non-blocking web framework based on Plack and AnyEvent
 
 =head1 SYNOPSIS
 
+  ### app.psgi
   use Tatsumaki::Error;
   use Tatsumaki::Application;
   use Tatsumaki::HTTPClient;
   use Tatsumaki::Server;
 
   package MainHandler;
-  use base qw(Tatsumaki::Handler);
+  use parent qw(Tatsumaki::Handler);
 
   sub get {
       my $self = shift;
@@ -31,7 +32,7 @@ Tatsumaki - Non-blocking Web server and framework based on AnyEvent
   }
 
   package FeedHandler;
-  use base qw(Tatsumaki::Handler);
+  use parent qw(Tatsumaki::Handler);
   __PACKAGE__->asynchronous(1);
 
   use JSON;
@@ -53,7 +54,7 @@ Tatsumaki - Non-blocking Web server and framework based on AnyEvent
   }
 
   package StreamWriter;
-  use base qw(Tatsumaki::Handler);
+  use parent qw(Tatsumaki::Handler);
   __PACKAGE__->asynchronous(1);
 
   use AnyEvent;
@@ -74,16 +75,16 @@ Tatsumaki - Non-blocking Web server and framework based on AnyEvent
 
   package main;
 
-  if (__FILE__ eq $0) {
-      exec 'plackup', '-s', 'AnyEvent', '-a', $0;
-  } else {
-      my $app = Tatsumaki::Application->new([
-          '/stream' => 'StreamWriter',
-          '/feed/(\w+)' => 'FeedHandler',
-          '/' => 'MainHandler',
-      ]);
-      return $app;
-  }
+  my $app = Tatsumaki::Application->new([
+      '/stream' => 'StreamWriter',
+      '/feed/(\w+)' => 'FeedHandler',
+      '/' => 'MainHandler',
+  ]);
+  return $app;
+
+And now run it with:
+
+  plackup -s AnyEvent -a app.psgi
 
 =head1 WARNINGS
 
