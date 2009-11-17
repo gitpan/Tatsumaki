@@ -30,11 +30,10 @@ requires:
   Plack::Request: 0
   Plack::Server::AnyEvent: 0.02
   Text::MicroTemplate: 0
-  Text::MicroTemplate::Extended: 0
   Try::Tiny: 0
   parent: 0
   perl: 5.8.1
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/miyagawa/Tatsumaki.git
-version: 0.1002
+version: 0.1003
