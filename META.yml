@@ -25,14 +25,16 @@ requires:
   AnyEvent::HTTP: 0
   Filter::Util::Call: 0
   JSON: 0
+  Mouse: 0.34
   Plack: 0.9006
   Plack::Request: 0
   Plack::Server::AnyEvent: 0.02
   Text::MicroTemplate: 0
+  Text::MicroTemplate::Extended: 0
   Try::Tiny: 0
   parent: 0
   perl: 5.8.1
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/miyagawa/Tatsumaki.git
-version: 0.1001
+version: 0.1002
