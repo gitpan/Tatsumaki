@@ -1,5 +1,7 @@
 package Tatsumaki::MessageQueue;
 use strict;
+
+use AnyEvent;
 use Any::Moose;
 use Try::Tiny;
 use Scalar::Util;
@@ -13,6 +15,10 @@ has clients => (is => 'rw', isa => 'HashRef', default => sub { +{} });
 our $BacklogLength = 30; # TODO configurable
 
 my %instances;
+
+sub channels {
+    values %instances;
+}
 
 sub instance {
     my($class, $name) = @_;
@@ -68,6 +74,7 @@ sub flush_events {
                 undef $client;
                 delete $self->clients->{$client_id};
             };
+            Scalar::Util::weaken $client->{timer};
         }
     } catch {
         /Tatsumaki::Error::ClientDisconnect/ and do {
@@ -97,6 +104,7 @@ sub poll_once {
         warn "Timing out $client_id long-poll" if DEBUG;
         $self->flush_events($client_id);
     };
+    Scalar::Util::weaken $client->{timer};
 
     # flush backlog for a new client
     if ($is_new) {
@@ -108,6 +116,7 @@ sub poll_once {
 sub poll {
     my($self, $client_id, $cb) = @_;
 
+    # TODO register client info like names and remote host in $client
     my $cv = AE::cv;
     $cv->cb(sub { $cb->($_[0]->recv) });
     my $s = $self->clients->{$client_id} = {
@@ -119,3 +128,88 @@ sub poll {
 }
 
 1;
+
+__END__
+
+=encoding utf-8
+
+=for stopwords
+
+=head1 NAME
+
+Tatsumaki::MessageQueue - Message Queue system for Tatsumaki
+
+=head1 SYNOPSIS
+
+To publish a message, you first create an instance of the message queue on
+a specific channel:
+
+    my $mq = Tatsumaki::MessageQueue->instance($channel);
+    $mq->publish({
+        type => "message", data => $your_data,
+        address => $self->request->address,
+        time => scalar Time::HiRes::gettimeofday,
+    });
+
+Later, in a handler, you can poll for new messages:
+
+    my $mq = Tatsumaki::MessageQueue->instance($channel);
+    my $client_id = $self->request->param('client_id')
+        or Tatsumaki::Error::HTTP->throw(500, "'client_id' needed");
+    $mq->poll_once($client_id, sub { $self->write(\@_); $self->finish; });
+
+Additionally, if you are using Multipart XmlHttpRequest (MXHR) you can use
+the event API, and run a callback each time a new message is published:
+
+    my $mq = Tatsumaki::MessageQueue->instance($channel);
+    $mq->poll($client_id, sub {
+        my @events = @_;
+        for my $event (@events) {
+            $self->stream_write($event);
+        }
+    });
+
+=head1 DESCRIPTION
+
+Tatsumaki::MessageQueue is a simple message queue, storing all messages in
+memory, and keeping track of a configurable backlog.  All polling requests
+are made with a C<$client_id>, and the message queue keeps track of a buffer
+per client, to ensure proper message delivery.
+
+=head1 CONFIGURATION
+
+=over
+
+=item BacklogLength
+
+To configure the number of messages in the backlog, set 
+C<$Tatsumaki::MessageQueue::BacklogLength>.  By default, this is set to 30.
+
+=back
+
+=head1 METHODS
+
+=head2 publish
+
+This method publishes a message into the message queue, for immediate 
+consumption by all polling clients.
+
+=head2 poll($client_id, $code_ref)
+
+This is the event-driven poll mechanism, which accepts a callback as the
+second parameter. It will stream messages to the code ref passed in. 
+
+=head2 poll_once($client_id, $code_ref)
+
+This method returns all messages since the last poll to the code reference
+passed as the second parameter.
+
+=head1 AUTHOR
+
+Tatsuhiko Miyagawa
+
+=head1 SEE ALSO
+
+L<Tatsumaki>
+
+=cut
