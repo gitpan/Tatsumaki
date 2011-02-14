@@ -34,4 +34,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/miyagawa/Tatsumaki.git
-version: 0.1011
+version: 0.1012
