@@ -3,7 +3,7 @@ use AnyEvent;
 use Any::Moose;
 use Tatsumaki::Handler;
 use Tatsumaki::Request;
-use Try::Tiny;
+use 5.6.0;  # for @-
 
 use Plack::Middleware::Static;
 
@@ -46,13 +46,14 @@ sub route {
 }
 
 sub dispatch {
-    my($self, $req) = @_;
+    my $self = shift;
+    my $req  = shift;
 
     my $path = $req->path_info;
     for my $rule (@{$self->_rules}) {
-        if ($path =~ $rule->{path}) {
-            my $args = [ $1, $2, $3, $4, $5, $6, $7, $8, $9 ];
-            return $rule->{handler}->new(@_, application => $self, request => $req, args => $args);
+        if (my @args = ($path =~ $rule->{path})) {
+            shift @args if @- == 1 && @args == 1 && defined($args[0]) && $args[0] eq '1';
+            return $rule->{handler}->new(@_, application => $self, request => $req, args => \@args);
         }
     }
 

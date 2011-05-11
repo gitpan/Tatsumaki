@@ -27,11 +27,10 @@ requires:
   Mouse: 0.34
   Plack: 0.9913
   Text::MicroTemplate: 0
-  Try::Tiny: 0
   Twiggy: 0
   parent: 0
   perl: 5.8.1
 resources:
   license: http://dev.perl.org/licenses/
-  repository: git://github.com/miyagawa/Tatsumaki.git
-version: 0.1012
+  repository: origin
+version: 0.101203
