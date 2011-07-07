@@ -7,7 +7,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: 6.42
 distribution_type: module
-generated_by: 'Module::Install version 1.00'
+generated_by: 'Module::Install version 1.01'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -27,10 +27,11 @@ requires:
   Mouse: 0.34
   Plack: 0.9913
   Text::MicroTemplate: 0
+  Try::Tiny: 0
   Twiggy: 0
   parent: 0
   perl: 5.8.1
 resources:
   license: http://dev.perl.org/licenses/
-  repository: origin
-version: 0.101203
+  repository: git://github.com/miyagawa/Tatsumaki.git
+version: 0.1013

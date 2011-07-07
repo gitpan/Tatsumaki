@@ -10,6 +10,7 @@ requires 'Plack', 0.9913;
 requires 'Twiggy';
 requires 'JSON';
 requires 'Text::MicroTemplate';
+requires 'Try::Tiny';
 requires 'parent';
 build_requires 'Test::More';
 test_requires 'Test::Requires';

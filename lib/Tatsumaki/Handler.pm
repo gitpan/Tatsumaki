@@ -6,6 +6,7 @@ use Encode ();
 use Any::Moose;
 use MIME::Base64 ();
 use JSON;
+use Try::Tiny;
 use Tatsumaki::Error;
 
 has application => (is => 'rw', isa => 'Tatsumaki::Application');
@@ -16,6 +17,8 @@ has args     => (is => 'rw', isa => 'ArrayRef');
 has writer   => (is => 'rw');
 has mxhr     => (is => 'rw', isa => 'Bool');
 has mxhr_boundary => (is => 'rw', isa => 'Str', lazy => 1, lazy_build => 1);
+has json     => (is => 'rw', isa => 'JSON', lazy => 1, default => sub { JSON->new->utf8 });
+has binary   => (is => 'rw', isa => 'Bool');
 
 has _write_buffer => (is => 'rw', isa => 'ArrayRef', lazy => 1, default => sub { [] });
 
@@ -82,16 +85,9 @@ sub async_cb {
     my $self = shift;
     my $cb = shift;
     return sub {
-        local $@;
-        if (wantarray) {
-            my @ret = eval { &$cb };
-            $@ or return @ret;
-        }
-        else {
-            my $ret = eval { &$cb };
-            $@ or return $ret;
-        }
-        $self->condvar->croak(my $err = $@);
+        my @args = @_;
+        try { $cb->(@args) }
+        catch { $self->condvar->croak($_) };
     };
 }
 
@@ -104,11 +100,10 @@ sub run {
     }
 
     my $catch = sub {
-        my $e = shift;
-        if (ref($e) && $e->isa('Tatsumaki::Error::HTTP')) {
-            return [ $e->code, [ 'Content-Type' => $e->content_type ], [ $e->message ] ];
+        if ($_->isa('Tatsumaki::Error::HTTP')) {
+            return [ $_->code, [ 'Content-Type' => 'text/plain' ], [ $_->message ] ];
         } else {
-            $self->log($e);
+            $self->log($_);
             return [ 500, [ 'Content-Type' => 'text/plain' ], [ "Internal Server Error" ] ];
         }
     };
@@ -119,24 +114,24 @@ sub run {
             my $start_response = shift;
             $cv->cb(sub {
                 my $cv = shift;
-                local $@;
-                eval {
+                try {
                     my $res = $cv->recv;
                     my $w = $start_response->($res);
                     if (!$res->[2] && $w) {
                         $self->writer($w);
                         $self->condvar(my $cv2 = AE::cv);
                     }
+                } catch {
+                    $start_response->($catch->());
                 };
-                $@ and $start_response->($catch->($@));
             });
 
-            local $@;
-            eval {
+            try {
                 $self->prepare;
                 $self->$method(@{$self->args});
+            } catch {
+                $cv->croak($_);
             };
-            $@ and $cv->croak(my $err = $@);
 
             unless ($self->request->env->{'psgi.nonblocking'}) {
                 $self->log("Running an async handler in a blocking server. MQ based app should cause a deadlock.\n");
@@ -144,14 +139,16 @@ sub run {
             }
         };
     } else {
-        local $@;
-        my $ret = eval {
+        my $res = try {
             $self->prepare;
             $self->$method(@{$self->args});
             $self->flush;
-            $self->response->finalize;
+            return $self->response->finalize;
+        } catch {
+            return $catch->();
         };
-        $@ ? $catch->($@) : $ret;
+
+        return $res;
     }
 }
 
@@ -170,12 +167,14 @@ sub get_chunk {
     my $self = shift;
     if (ref $_[0]) {
         if ($self->mxhr) {
-            my $json = JSON::encode_json($_[0]);
+            my $json = $self->json->encode($_[0]);
             return "Content-Type: application/json\n\n$json\n--" . $self->mxhr_boundary. "\n";
         } else {
             $self->response->content_type('application/json');
-            return JSON::encode_json($_[0]);
+            return $self->json->encode($_[0]);
         }
+    } elsif ($self->binary) {
+        join '', @_;
     } else {
         join '', map Encode::encode_utf8($_), @_;
     }
@@ -183,11 +182,12 @@ sub get_chunk {
 
 sub _write {
     my $self = shift;
-    local $@;
-    eval { $self->get_writer->write(@_) };
-    if ($@) {
-        $@ =~ /Broken pipe/ and Tatsumaki::Error::ClientDisconnect->throw;
-        die $@;
+    my @buf  = @_;
+    try {
+        $self->get_writer->write(@buf);
+    } catch {
+        /Broken pipe/ and Tatsumaki::Error::ClientDisconnect->throw;
+        die $_;
     }
 }
 
