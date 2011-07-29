@@ -18,7 +18,7 @@ sub _carp {
     return warn @_, " at $file line $line\n";
 }
 
-our $VERSION = '0.98';
+our $VERSION = '0.96';
 $VERSION = eval $VERSION;    ## no critic (BuiltinFunctions::ProhibitStringyEval)
 
 use Test::Builder::Module;
@@ -88,7 +88,7 @@ sub ok ($;$) {
     return $tb->ok( $test, $name );
 }
 
-#line 372
+#line 367
 
 sub is ($$;$) {
     my $tb = Test::More->builder;
@@ -104,7 +104,7 @@ sub isnt ($$;$) {
 
 *isn't = \&isnt;
 
-#line 416
+#line 411
 
 sub like ($$;$) {
     my $tb = Test::More->builder;
@@ -112,7 +112,7 @@ sub like ($$;$) {
     return $tb->like(@_);
 }
 
-#line 431
+#line 426
 
 sub unlike ($$;$) {
     my $tb = Test::More->builder;
@@ -120,7 +120,7 @@ sub unlike ($$;$) {
     return $tb->unlike(@_);
 }
 
-#line 476
+#line 471
 
 sub cmp_ok($$$;$) {
     my $tb = Test::More->builder;
@@ -128,7 +128,7 @@ sub cmp_ok($$$;$) {
     return $tb->cmp_ok(@_);
 }
 
-#line 511
+#line 506
 
 sub can_ok ($@) {
     my( $proto, @methods ) = @_;
@@ -162,7 +162,7 @@ sub can_ok ($@) {
     return $ok;
 }
 
-#line 577
+#line 572
 
 sub isa_ok ($$;$) {
     my( $object, $class, $obj_name ) = @_;
@@ -222,7 +222,7 @@ WHOA
     return $ok;
 }
 
-#line 656
+#line 651
 
 sub new_ok {
     my $tb = Test::More->builder;
@@ -247,16 +247,16 @@ sub new_ok {
     return $obj;
 }
 
-#line 741
+#line 736
 
-sub subtest {
+sub subtest($&) {
     my ($name, $subtests) = @_;
 
     my $tb = Test::More->builder;
     return $tb->subtest(@_);
 }
 
-#line 765
+#line 760
 
 sub pass (;$) {
     my $tb = Test::More->builder;
@@ -270,7 +270,7 @@ sub fail (;$) {
     return $tb->ok( 0, @_ );
 }
 
-#line 833
+#line 823
 
 sub use_ok ($;@) {
     my( $module, @imports ) = @_;
@@ -332,7 +332,7 @@ sub _eval {
     return( $eval_result, $eval_error );
 }
 
-#line 902
+#line 892
 
 sub require_ok ($) {
     my($module) = shift;
@@ -376,7 +376,7 @@ sub _is_module_name {
     return $module =~ /^[a-zA-Z]\w*$/ ? 1 : 0;
 }
 
-#line 979
+#line 969
 
 our( @Data_Stack, %Refs_Seen );
 my $DNE = bless [], 'Does::Not::Exist';
@@ -483,7 +483,7 @@ sub _type {
     return '';
 }
 
-#line 1139
+#line 1129
 
 sub diag {
     return Test::More->builder->diag(@_);
@@ -493,13 +493,13 @@ sub note {
     return Test::More->builder->note(@_);
 }
 
-#line 1165
+#line 1155
 
 sub explain {
     return Test::More->builder->explain(@_);
 }
 
-#line 1231
+#line 1221
 
 ## no critic (Subroutines::RequireFinalReturn)
 sub skip {
@@ -527,7 +527,7 @@ sub skip {
     last SKIP;
 }
 
-#line 1315
+#line 1305
 
 sub todo_skip {
     my( $why, $how_many ) = @_;
@@ -548,7 +548,7 @@ sub todo_skip {
     last TODO;
 }
 
-#line 1370
+#line 1360
 
 sub BAIL_OUT {
     my $reason = shift;
@@ -557,7 +557,7 @@ sub BAIL_OUT {
     $tb->BAIL_OUT($reason);
 }
 
-#line 1409
+#line 1399
 
 #'#
 sub eq_array {
@@ -697,7 +697,7 @@ WHOA
     }
 }
 
-#line 1556
+#line 1546
 
 sub eq_hash {
     local @Data_Stack = ();
@@ -732,7 +732,7 @@ sub _eq_hash {
     return $ok;
 }
 
-#line 1615
+#line 1605
 
 sub eq_set {
     my( $a1, $a2 ) = @_;
@@ -757,6 +757,6 @@ sub eq_set {
     );
 }
 
-#line 1817
+#line 1807
 
 1;

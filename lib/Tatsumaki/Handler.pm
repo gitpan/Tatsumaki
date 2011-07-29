@@ -6,7 +6,6 @@ use Encode ();
 use Any::Moose;
 use MIME::Base64 ();
 use JSON;
-use Try::Tiny;
 use Tatsumaki::Error;
 
 has application => (is => 'rw', isa => 'Tatsumaki::Application');
@@ -85,9 +84,16 @@ sub async_cb {
     my $self = shift;
     my $cb = shift;
     return sub {
-        my @args = @_;
-        try { $cb->(@args) }
-        catch { $self->condvar->croak($_) };
+        local $@;
+        if (wantarray) {
+            my @ret = eval { &$cb };
+            $@ or return @ret;
+        }
+        else {
+            my $ret = eval { &$cb };
+            $@ or return $ret;
+        }
+        $self->condvar->croak(my $err = $@);
     };
 }
 
@@ -100,10 +106,11 @@ sub run {
     }
 
     my $catch = sub {
-        if ($_->isa('Tatsumaki::Error::HTTP')) {
-            return [ $_->code, [ 'Content-Type' => 'text/plain' ], [ $_->message ] ];
+        my $e = shift;
+        if (ref($e) && $e->isa('Tatsumaki::Error::HTTP')) {
+            return [ $e->code, [ 'Content-Type' => $e->content_type ], [ $e->message ] ];
         } else {
-            $self->log($_);
+            $self->log($e);
             return [ 500, [ 'Content-Type' => 'text/plain' ], [ "Internal Server Error" ] ];
         }
     };
@@ -114,24 +121,24 @@ sub run {
             my $start_response = shift;
             $cv->cb(sub {
                 my $cv = shift;
-                try {
+                local $@;
+                eval {
                     my $res = $cv->recv;
                     my $w = $start_response->($res);
                     if (!$res->[2] && $w) {
                         $self->writer($w);
                         $self->condvar(my $cv2 = AE::cv);
                     }
-                } catch {
-                    $start_response->($catch->());
                 };
+                $@ and $start_response->($catch->($@));
             });
 
-            try {
+            local $@;
+            eval {
                 $self->prepare;
                 $self->$method(@{$self->args});
-            } catch {
-                $cv->croak($_);
             };
+            $@ and $cv->croak(my $err = $@);
 
             unless ($self->request->env->{'psgi.nonblocking'}) {
                 $self->log("Running an async handler in a blocking server. MQ based app should cause a deadlock.\n");
@@ -139,16 +146,14 @@ sub run {
             }
         };
     } else {
-        my $res = try {
+        local $@;
+        my $ret = eval {
             $self->prepare;
             $self->$method(@{$self->args});
             $self->flush;
-            return $self->response->finalize;
-        } catch {
-            return $catch->();
+            $self->response->finalize;
         };
-
-        return $res;
+        $@ ? $catch->($@) : $ret;
     }
 }
 
@@ -182,12 +187,11 @@ sub get_chunk {
 
 sub _write {
     my $self = shift;
-    my @buf  = @_;
-    try {
-        $self->get_writer->write(@buf);
-    } catch {
-        /Broken pipe/ and Tatsumaki::Error::ClientDisconnect->throw;
-        die $_;
+    local $@;
+    eval { $self->get_writer->write(@_) };
+    if ($@) {
+        $@ =~ /Broken pipe/ and Tatsumaki::Error::ClientDisconnect->throw;
+        die $@;
     }
 }
 
